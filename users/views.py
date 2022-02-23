@@ -27,7 +27,7 @@ class UserCreateListApi(APIView):
     def get(self, request):
         data = EndUser.objects.all()
         if data.count()>0:
-            serializer = UserSerializer(data)
+            serializer = UserSerializer(data, many=True)
             return Response(serializer.data,status=HTTP_200_OK)
         else:
             return Response(status=HTTP_404_NOT_FOUND)
@@ -43,10 +43,10 @@ class UserCreateListApi(APIView):
     
 
 class UserUpdateRetDelApi(APIView):
-    def delete(self,pk):
+    def delete(self,request, pk):
         try:
             pk = self.kwargs['pk']
-            row = EndUser.objects.filter(pk=pk)
+            row = EndUser.objects.filter(id=pk)
             if row.count()>0:
                 row.delete()
                 return Response(status=HTTP_200_OK)
@@ -54,22 +54,22 @@ class UserUpdateRetDelApi(APIView):
                 return Response(status=HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response(status=HTTP_500_INTERNAL_SERVER_ERROR)
-    def get(self,pk):
+    def get(self, request, pk):
         try:
             pk = self.kwargs['pk']
-            row = User.objects.filter(pk=pk)
-            if row.count()>0:
-                serializer = UserSerializer(data=row)
-                return Response(serializer.data,status=HTTP_200_OK)
-            else:
-                return Response(status=HTTP_404_NOT_FOUND)
+            row = EndUser.objects.get(id=pk)
+            serializer = UserSerializer(row)
+            return Response(serializer.data,status=HTTP_200_OK)
+        except EndUser.DoesNotExist:
+            return Response(status=HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response(status=HTTP_500_INTERNAL_SERVER_ERROR)
-    def put(self, request):
+            return Response({"msg":e},status=HTTP_500_INTERNAL_SERVER_ERROR)
+    def put(self, request, pk):
         try:
+            pk = self.kwargs['pk']
             data = request.data
-            news = EndUser.objects.get(id=data["id"])
-            serializer = UserSerializer(news,data=n,partial=True)
+            user = EndUser.objects.get(id=pk)
+            serializer = UserSerializer(user,data=data,partial=True)
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 return Response(status=HTTP_200_OK)
