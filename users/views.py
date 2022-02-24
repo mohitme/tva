@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.db.models import Q
 from rest_framework.status import (
     HTTP_200_OK,
     HTTP_201_CREATED,
@@ -9,30 +10,33 @@ from rest_framework.status import (
 )
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.generics import (
-    CreateAPIView,
-    ListAPIView,
-    RetrieveAPIView,
-    RetrieveUpdateDestroyAPIView,
-    UpdateAPIView,
-    DestroyAPIView,
-)
 from .serializers import (
     UserSerializer
 )
 from users.models import EndUser
+from .paginations import *
 # Create your views here.
 
 class UserCreateListApi(APIView):
     def get(self, request):
+        name = self.request.GET.get("name")
+        sort = self.request.GET.get("sort")
         data = EndUser.objects.all()
+        if name:
+            if sort:
+                data = EndUser.objects.filter(Q(first_name__icontains=name)|Q(last_name__icontains=name)).order_by(sort)
+            else:
+                data = EndUser.objects.filter(Q(first_name__icontains=name)|Q(last_name__icontains=name))
         if data.count()>0:
             serializer = UserSerializer(data, many=True)
-            return Response(serializer.data,status=HTTP_200_OK)
+            paginator = CustomPagination()
+            pg = paginator.paginate_queryset(serializer.data, request)
+            return Response(pg, status=HTTP_200_OK)
+            # return Response(serializer.data,status=HTTP_200_OK)
         else:
             return Response(status=HTTP_404_NOT_FOUND)
     def post(self, request):
-        try:
+        try:    
             data = request.data
             serializer = UserSerializer(data=data)
             if serializer.is_valid(raise_exception=True):
